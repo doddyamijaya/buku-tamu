@@ -172,7 +172,8 @@ tema();setInterval(tema,60000);</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 const C=window.CONFIG||{},SB_URL=C.SB_URL||"",SB_KEY=C.SB_KEY||"",DOM=C.DOM||"@bukutamu.app";
-const NOCFG=!SB_URL||SB_URL.includes("PROJECT_ID")||!SB_KEY||SB_KEY.includes("ISI_");
+const CFGMSG=!window.CONFIG?"config.js tidak terbaca: file tidak ada di repository, salah nama, atau ada kesalahan tulis di dalamnya.":(!SB_URL||SB_URL.includes("PROJECT_ID"))?"SB_URL di config.js belum diisi (masih PROJECT_ID atau kosong).":(!SB_KEY||SB_KEY.includes("ISI_"))?"SB_KEY di config.js belum diisi (masih ISI_ atau kosong).":"";
+const NOCFG=!!CFGMSG;
 const UN=["Kepala UPTD","Sub Bagian Tata Usaha","Seksi Informasi Pendidikan (Infodik)","Seksi Pengembangan Teknologi"];
 let tok=null,D=[],S=[],foto=null,who="",role="user";
 const $=s=>document.querySelector(s);
@@ -198,7 +199,7 @@ async function load(){
 }
 $("#lf").onsubmit=async e=>{
   e.preventDefault();const u=e.target.u.value.trim(),b=$("#lb");$("#err").textContent="";
-  if(NOCFG){$("#err").textContent="Isi SB_URL dan SB_KEY di file config.js.";return}
+  if(NOCFG){$("#err").textContent=CFGMSG;return}
   b.disabled=true;
   try{const j=await api("/auth/v1/token?grant_type=password",{method:"POST",body:JSON.stringify({email:u.includes("@")?u:u+DOM,password:e.target.p.value})},false);
     tok=j.access_token;who=u.split("@")[0];e.target.reset();
@@ -269,7 +270,7 @@ function shrink(file){return new Promise((ok,no)=>{const im=new Image(),u=URL.cr
 $("#fo").onchange=async e=>{const f=e.target.files[0];foto=null;$("#pv").hidden=true;if(!f)return;try{foto=await shrink(f);$("#pv").src=foto;$("#pv").hidden=false}catch(x){toast("Foto tidak bisa dibaca.",1)}};
 $("#f").addEventListener("submit",async e=>{
   e.preventDefault();const f=Object.fromEntries(new FormData(e.target)),b=$("#fb");
-  if(NOCFG){toast("Isi config.js terlebih dahulu.",1);return}
+  if(NOCFG){toast(CFGMSG,1);return}
   b.disabled=true;
   try{
     await api("/rest/v1/tamu",{method:"POST",headers:{Prefer:"return=minimal"},body:JSON.stringify({nama:f.nama.trim(),instansi:f.instansi.trim(),hp:f.hp.trim(),jml:+f.jml||1,perlu:f.perlu,temu:f.temu,ket:f.ket.trim()||null,foto:foto,ada_foto:!!foto})},false);
