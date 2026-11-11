@@ -115,6 +115,7 @@ tema();setInterval(tema,60000);</script>
     <div><label>Bertemu Dengan <span>*</span></label><select name="temu" class="un" required></select></div>
     <div class="full"><label>Keterangan</label><textarea name="ket" rows="3" maxlength="300" placeholder="Opsional"></textarea></div>
     <div class="full fotof"><label>Foto Tamu (opsional)</label><input id="fo" type="file" accept="image/*" capture="user"><img id="pv" hidden alt="Pratinjau foto"></div>
+    <div class="full sub" style="margin:0">Data Anda hanya dipakai untuk pencatatan kunjungan dan hanya dapat dilihat petugas.</div>
     <div class="full"><button class="btn" id="fb" type="submit">Kirim Data Kunjungan</button></div>
   </form></div>
 </section>
@@ -153,7 +154,7 @@ tema();setInterval(tema,60000);</script>
   <h2>Kelola Pengguna</h2><p class="sub">Hanya Admin yang dapat menambah pengguna serta mengubah username, password, atau peran. User: petugas biasa. Admin: dapat mengelola pengguna.</p>
   <div class="card" id="uf" hidden><h3 id="uft">Ubah Pengguna</h3><form class="g" id="ufm"><input type="hidden" name="uid">
     <div><label>Username</label><input name="u" required pattern="[a-z0-9._-]{3,30}" title="3-30 karakter: huruf kecil, angka, titik, garis bawah, atau strip" autocomplete="off"></div>
-    <div><label id="upl">Password Baru</label><input name="p" type="password" minlength="6" placeholder="Kosongkan jika tidak diubah" autocomplete="new-password"></div>
+    <div><label id="upl">Password Baru</label><input name="p" type="password" minlength="10" placeholder="Kosongkan jika tidak diubah" autocomplete="new-password"></div>
     <div><label>Peran</label><select name="r"><option value="user">User (petugas biasa)</option><option value="admin">Admin</option></select></div>
     <div class="full act"><button class="btn" id="ubs" type="submit">Simpan Perubahan</button><button class="btn s" type="button" id="ucx">Batal</button></div>
   </form></div>
@@ -169,7 +170,8 @@ tema();setInterval(tema,60000);</script>
 <div id="md" hidden><img id="mi" alt="Foto tamu"></div>
 <div id="toast"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="qrcode.min.js"></script>
+<script>window.QRCode||(function(){var e=document.createElement("script");e.src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";document.head.appendChild(e)})()</script>
 <script>
 const C=window.CONFIG||{},SB_URL=C.SB_URL||"",SB_KEY=C.SB_KEY||"",DOM=C.DOM||"@bukutamu.app";
 const CFGMSG=!window.CONFIG?"config.js tidak terbaca: file tidak ada di repository, salah nama, atau ada kesalahan tulis di dalamnya.":(!SB_URL||SB_URL.includes("PROJECT_ID"))?"SB_URL di config.js belum diisi (masih PROJECT_ID atau kosong).":(!SB_KEY||SB_KEY.includes("ISI_"))?"SB_KEY di config.js belum diisi (masih ISI_ atau kosong).":"";
@@ -262,7 +264,7 @@ $("main").addEventListener("click",async e=>{
   }catch(x){toast(x.message,1)}
 });
 $("#csv").onclick=()=>{
-  const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+  const q=v=>{v=String(v==null?"":v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};
   const t=["Masuk,Keluar,Nama,Instansi,HP,Jumlah,Keperluan,Bertemu,Keterangan",...list().map(t=>[t.masuk,t.keluar,t.nama,t.instansi,t.hp,t.jml,t.perlu,t.temu,t.ket].map(q).join(","))].join("\n");
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+t],{type:"text/csv"}));a.download="data-tamu-"+dk(new Date())+".csv";a.click();
 };
@@ -275,7 +277,7 @@ $("#f").addEventListener("submit",async e=>{
   try{
     await api("/rest/v1/tamu",{method:"POST",headers:{Prefer:"return=minimal"},body:JSON.stringify({nama:f.nama.trim(),instansi:f.instansi.trim(),hp:f.hp.trim(),jml:+f.jml||1,perlu:f.perlu,temu:f.temu,ket:f.ket.trim()||null,foto:foto,ada_foto:!!foto})},false);
     e.target.reset();e.target.jml.value=1;foto=null;$("#pv").hidden=true;toast("Terima kasih, data kunjungan Anda telah tercatat.");if(tok)load();
-  }catch(x){toast("Gagal mengirim: "+x.message,1)}
+  }catch(x){console.error(x);toast("Gagal mengirim data. Periksa koneksi internet lalu coba lagi.",1)}
   b.disabled=false;
 });
 $("#sf").addEventListener("submit",async e=>{
@@ -288,7 +290,7 @@ async function loadU(){try{U=await api("/rest/v1/rpc/daftar_user",{method:"POST"
 function rU(){$("#urows").innerHTML=U.length?U.map(u=>'<tr><td><b>'+esc(u.username)+'</b></td><td><span class="bd '+(u.role==="admin"?"in":"out")+'">'+(u.role==="admin"?"Admin":"User")+'</span></td><td><div class="act"><button class="btn sm s" data-ue="'+u.id+'">Ubah</button><button class="btn sm s dg" data-ud="'+u.id+'">Hapus</button></div></td></tr>').join(""):'<tr><td colspan="3" class="empty">Belum ada pengguna.</td></tr>'}
 $("#v-user").addEventListener("click",async e=>{
   const b=e.target.closest("button");if(!b)return;
-  if(b.id==="uadd"){const f=$("#ufm");f.reset();f.uid.value="";f.p.required=true;f.p.placeholder="Minimal 6 karakter";$("#uft").textContent="Tambah Pengguna";$("#upl").textContent="Password";$("#ubs").textContent="Tambahkan Pengguna";$("#uf").hidden=false;window.scrollTo(0,0)}
+  if(b.id==="uadd"){const f=$("#ufm");f.reset();f.uid.value="";f.p.required=true;f.p.placeholder="Minimal 10 karakter";$("#uft").textContent="Tambah Pengguna";$("#upl").textContent="Password";$("#ubs").textContent="Tambahkan Pengguna";$("#uf").hidden=false;window.scrollTo(0,0)}
   if(b.dataset.ue){const u=U.find(x=>x.id===b.dataset.ue),f=$("#ufm");f.uid.value=u.id;f.u.value=u.username;f.p.value="";f.p.required=false;f.p.placeholder="Kosongkan jika tidak diubah";f.r.value=u.role;$("#uft").textContent="Ubah Pengguna";$("#upl").textContent="Password Baru";$("#ubs").textContent="Simpan Perubahan";$("#uf").hidden=false;window.scrollTo(0,0)}
   if(b.id==="ucx")$("#uf").hidden=true;
   if(b.dataset.ud){if(b.dataset.s){try{await api("/rest/v1/rpc/hapus_user",{method:"POST",body:JSON.stringify({p_id:b.dataset.ud})},true);toast("Pengguna dihapus.");loadU()}catch(x){toast(x.message,1)}}else{b.dataset.s=1;b.textContent="Yakin?";setTimeout(()=>{b.dataset.s="";b.textContent="Hapus"},3000)}}
